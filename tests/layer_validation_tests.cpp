@@ -7323,7 +7323,7 @@ TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass) {
     VkCommandBufferAllocateInfo cmd = {};
     cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cmd.pNext = NULL;
-    cmd.commandPool = m_commandPool;
+    cmd.commandPool = m_commandPool->handle();
     cmd.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
     cmd.commandBufferCount = 1;
 
@@ -7344,7 +7344,7 @@ TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass) {
     vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);
 
     m_errorMonitor->VerifyFound();
-    vkFreeCommandBuffers(m_device->device(), m_commandPool, 1, &draw_cmd);
+    vkFreeCommandBuffers(m_device->device(), m_commandPool->handle(), 1, &draw_cmd);
 }
 
 TEST_F(VkLayerTest, CommandBufferResetErrors) {
@@ -9095,13 +9095,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
 
     // Create command pool with incompatible queueflags
     const std::vector<VkQueueFamilyProperties> queue_props = m_device->queue_props;
-    uint32_t queue_family_index = UINT32_MAX;
-    for (uint32_t i = 0; i < queue_props.size(); i++) {
-        if ((queue_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0) {
-            queue_family_index = i;
-            break;
-        }
-    }
+    uint32_t queue_family_index = m_device->QueueFamilyWithoutCapabilities(VK_QUEUE_COMPUTE_BIT);
     if (queue_family_index == UINT32_MAX) {
         printf("             No non-compute queue found; skipped.\n");
         return;
@@ -11997,7 +11991,7 @@ TEST_F(VkLayerTest, SimultaneousUse) {
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = m_commandPool;
+    command_buffer_allocate_info.commandPool = m_commandPool->handle();
     command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
     command_buffer_allocate_info.commandBufferCount = 1;
 
@@ -12067,7 +12061,7 @@ TEST_F(VkLayerTest, SimultaneousUseOneShot) {
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
     alloc_info.commandBufferCount = 2;
-    alloc_info.commandPool = m_commandPool;
+    alloc_info.commandPool = m_commandPool->handle();
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     vkAllocateCommandBuffers(m_device->device(), &alloc_info, cmd_bufs);
 
@@ -13022,7 +13016,7 @@ TEST_F(VkLayerTest, FramebufferIncompatible) {
 
     VkCommandBufferAllocateInfo cbai = {};
     cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cbai.commandPool = m_commandPool;
+    cbai.commandPool = m_commandPool->handle();
     cbai.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
     cbai.commandBufferCount = 1;
 
@@ -17936,7 +17930,7 @@ TEST_F(VkPositiveLayerTest, SecondaryCommandBufferClearColorAttachments) {
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = m_commandPool;
+    command_buffer_allocate_info.commandPool = m_commandPool->handle();
     command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
     command_buffer_allocate_info.commandBufferCount = 1;
 
@@ -17976,7 +17970,7 @@ TEST_F(VkPositiveLayerTest, SecondaryCommandBufferImageLayoutTransitions) {
     // Allocate a secondary and primary cmd buffer
     VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = m_commandPool;
+    command_buffer_allocate_info.commandPool = m_commandPool->handle();
     command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
     command_buffer_allocate_info.commandBufferCount = 1;
 
@@ -18048,8 +18042,8 @@ TEST_F(VkPositiveLayerTest, SecondaryCommandBufferImageLayoutTransitions) {
     m_errorMonitor->VerifyNotFound();
     err = vkDeviceWaitIdle(m_device->device());
     ASSERT_VK_SUCCESS(err);
-    vkFreeCommandBuffers(m_device->device(), m_commandPool, 1, &secondary_command_buffer);
-    vkFreeCommandBuffers(m_device->device(), m_commandPool, 1, &primary_command_buffer);
+    vkFreeCommandBuffers(m_device->device(), m_commandPool->handle(), 1, &secondary_command_buffer);
+    vkFreeCommandBuffers(m_device->device(), m_commandPool->handle(), 1, &primary_command_buffer);
 }
 
 // This is a positive test. No failures are expected.
@@ -18879,7 +18873,7 @@ TEST_F(VkPositiveLayerTest, QueueSubmitSemaphoresAndLayoutTracking) {
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
     alloc_info.commandBufferCount = 4;
-    alloc_info.commandPool = m_commandPool;
+    alloc_info.commandPool = m_commandPool->handle();
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     vkAllocateCommandBuffers(m_device->device(), &alloc_info, cmd_bufs);
     VkImageObj image(m_device);
