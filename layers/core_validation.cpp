@@ -11505,11 +11505,74 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
     dev_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR(device, descriptorUpdateTemplate, pAllocator);
 }
 
+void PostCallRecordUpdateDescriptorSetWithTemplateKHR(layer_data *device_data, VkDescriptorSet descriptorSet,
+                                                      VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate, const void *pData) {
+    auto const template_map_entry = device_data->desc_template_map.find(descriptorUpdateTemplate);
+    if (template_map_entry == device_data->desc_template_map.end()) {
+        assert(0);
+    }
+
+    auto const &create_info = template_map_entry->second->create_info;
+
+    // Create a vector of write structs
+    std::vector<VkWriteDescriptorSet> desc_writes;
+
+    // Create a WriteDescriptorSet struct for each template update entry
+    for (uint32_t i = 0; i < create_info.descriptorUpdateEntryCount; i++) {
+        for (uint32_t j = 0; j < create_info.pDescriptorUpdateEntries[i].descriptorCount; j++) {
+            desc_writes.emplace_back();
+            auto &write_entry = desc_writes.back();
+
+            size_t offset = create_info.pDescriptorUpdateEntries[i].offset + j * create_info.pDescriptorUpdateEntries[i].stride;
+            char *update_entry = (char *)(pData) + offset;
+
+            write_entry.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write_entry.pNext = NULL;
+            write_entry.dstSet = descriptorSet;
+            write_entry.dstBinding = create_info.pDescriptorUpdateEntries[i].dstBinding + j;
+            write_entry.dstArrayElement = create_info.pDescriptorUpdateEntries[i].dstArrayElement;
+            write_entry.descriptorCount = 1;
+            write_entry.descriptorType = create_info.pDescriptorUpdateEntries[i].descriptorType;
+            write_entry.dstArrayElement = create_info.pDescriptorUpdateEntries[i].dstArrayElement;
+
+            switch (create_info.pDescriptorUpdateEntries[i].descriptorType) {
+                case VK_DESCRIPTOR_TYPE_SAMPLER:
+                case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                    write_entry.pImageInfo = reinterpret_cast<VkDescriptorImageInfo *>(update_entry);
+                    break;
+
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                    write_entry.pBufferInfo = reinterpret_cast<VkDescriptorBufferInfo *>(update_entry);
+                    break;
+
+                case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                    write_entry.pTexelBufferView = reinterpret_cast<VkBufferView *>(update_entry);
+                    break;
+                default:
+                    assert(0);
+                    break;
+            }
+        }
+    }
+    cvdescriptorset::PerformUpdateDescriptorSets(device_data, static_cast<uint32_t>(desc_writes.size()), desc_writes.data(), 0,
+                                                 NULL);
+}
+
 VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, VkDescriptorSet descriptorSet,
                                                               VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
                                                               const void *pData) {
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    dev_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate, pData);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    device_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate, pData);
+
+    PostCallRecordUpdateDescriptorSetWithTemplateKHR(device_data, descriptorSet, descriptorUpdateTemplate, pData);
+
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer commandBuffer,
